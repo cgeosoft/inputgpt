@@ -7,10 +7,12 @@ function generate(prompt, params, cb) {
     const startTs = Date.now();
     const xmlHttp = new XMLHttpRequest();
 
+    // amplitude.track("generate")
+
     chrome.storage.sync.get(["apikey", "engine"], (result) => {
 
         if (!result.apikey) {
-            toast("Please set your API key in the extension options", "#3949AB");
+            toast("<strong>InputGPT:</strong><br>Please set your API key in the extension options", "#3949AB");
             cb();
             return
         }
@@ -21,7 +23,7 @@ function generate(prompt, params, cb) {
 
         xmlHttp.onload = () => {
             if (xmlHttp.status === 401) {
-                toast("Invalid API key", "#D32F2F");
+                toast("<strong>InputGPT:</strong><br>Invalid API key", "#D32F2F");
                 cb();
                 return
             }
@@ -31,7 +33,7 @@ function generate(prompt, params, cb) {
                     status: xmlHttp.status,
                     statusText: xmlHttp.statusText
                 });
-                toast(`Error: ${xmlHttp.statusText}`, "#D32F2F");
+                toast(`<strong>InputGPT:</strong><br>Error: ${xmlHttp.statusText}`, "#D32F2F");
                 cb();
                 return
             }
@@ -43,10 +45,16 @@ function generate(prompt, params, cb) {
                 response.usage.completion_tokens * 0.06 / 1000 +
                 response.usage.prompt_tokens * 0.03 / 1000
 
+            // amplitude.track("generated", {
+            //     usage: response.usage,
+            //     time: endTs - startTs,
+            //     model: response.model,
+            // })
+
             toast([
                 `Model..: ${response.model}`,
                 `Tokens.: ${response.usage.total_tokens}`,
-                `Cost...: $${cost}`,
+                `Cost...: $${cost.toFixed(4)}`,
                 `Time...: ${endTs - startTs}ms`
             ].join("<br>"));
 
@@ -60,7 +68,7 @@ function generate(prompt, params, cb) {
                 status: xmlHttp.status,
                 statusText: xmlHttp.statusText
             });
-            toast(`Error: ${xmlHttp.statusText}`, "#D32F2F");
+            toast(`<strong>InputGPT:</strong><br>Error: ${xmlHttp.statusText}`, "#D32F2F");
             cb();
         };
 
@@ -92,12 +100,12 @@ function toast(message, backgroundColor) {
     toast.style.padding = "10px";
     toast.style.borderRadius = "5px";
     toast.style.border = "1px solid #444";
-    toast.style.backgroundColor = backgroundColor ?? "#263238";
-    toast.style.color = "white";
+    toast.style.backgroundColor = backgroundColor ?? "#4527A0";
+    toast.style.color = "#D1C4E9";
     toast.style.zIndex = "99"
     toast.style.fontFamily = "monospace";
     toast.style.width = "200px";
-    toast.innerHTML = `<strong>InputGPT:</strong><br>${message}`;
+    toast.innerHTML = message;
     document.body.appendChild(toast);
     setTimeout(() => {
         toast.remove();
@@ -129,14 +137,14 @@ document.addEventListener("keydown", (event) => {
 
     loader = setInterval(() => {
         elem.value += "."
-    }, 500);       
+    }, 500);
 
     elem.setAttribute("disabled", "disabled");
 
     generate(prompt, {
         short: elem.tagName === "INPUT",
     }, (result) => {
-        clearInterval(loader);        
+        clearInterval(loader);
         elem.value = result ?? `!gpt ${prompt}`;
         elem.removeAttribute("disabled");
         elem.focus();
